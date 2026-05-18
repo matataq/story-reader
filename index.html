@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#EA580C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Story Reader">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Story Reader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Lora:ital,wght@0,500;1,400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Nunito','Trebuchet MS',sans-serif;background:#FFF7ED;color:#431407;transition:background .4s,color .4s}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-thumb{background:#FED7AA;border-radius:3px}
+
+/* ── Layout ── */
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+#header{flex-shrink:0;background:#EA580C;color:#fff;padding:12px 16px 12px;padding-top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:10;box-shadow:0 3px 16px rgba(0,0,0,.2);z-index:200}
+#header-left{display:flex;align-items:center;gap:10;min-width:0}
+#header-right{display:flex;gap:8;flex-shrink:0}
+#book-title{font-size:16px;font-weight:900;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42vw}
+#book-sub{font-size:11px;opacity:.85;font-weight:600}
+#settings-panel{flex-shrink:0;background:#fff;border-bottom:2px solid #FED7AA;padding:14px 16px;display:flex;flex-wrap:wrap;gap:18;transition:background .4s;overflow-y:auto;max-height:45vh}
+#settings-panel.hidden{display:none}
+#main{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+
+/* ── Library ── */
+#library{flex:1;overflow-y:auto;padding:20px 16px 120px}
+#library h2{font-family:'Lora',Georgia,serif;font-size:26px;font-weight:700;color:#EA580C;margin-bottom:4px}
+#library .sub{font-size:13px;color:#9A3412;margin-bottom:20px}
+#book-list{display:flex;flex-direction:column;gap:12px}
+.book-card{background:#FFF7ED;border:2px solid #FED7AA;border-radius:20px;padding:16px 18px;display:flex;align-items:center;gap:14;box-shadow:0 2px 12px rgba(234,88,12,.1);cursor:pointer;transition:transform .15s,box-shadow .15s;-webkit-user-select:none;user-select:none}
+.book-card:active{transform:scale(.98)}
+.book-card .icon{font-size:42px;flex-shrink:0}
+.book-card .info{flex:1;min-width:0}
+.book-card .btitle{font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.book-card .bmeta{font-size:12px;color:#9A3412;margin-top:3px}
+.book-card .badge{display:inline-block;margin-top:6px;background:#EA580C;color:#fff;font-size:11px;font-weight:700;border-radius:20px;padding:2px 8px}
+.book-card .del-btn{background:none;border:1.5px solid #FED7AA;border-radius:10px;color:#9A3412;font-size:16px;width:34px;height:34px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+#empty-lib{text-align:center;padding:48px 20px;color:#9A3412}
+#empty-lib .em{font-size:64px;margin-bottom:16px}
+#add-fab{position:fixed;bottom:max(90px,calc(90px + env(safe-area-inset-bottom)));right:20px;background:#EA580C;color:#fff;border-radius:24px;padding:14px 22px;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 6px 24px rgba(234,88,12,.5);display:flex;align-items:center;gap:8;z-index:50;border:none;font-family:inherit}
+#add-fab input{display:none}
+
+/* ── Reader ── */
+#reader{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+#page-content{flex:1;overflow-y:auto;padding:22px 20px 20px;background:#fff;margin:10px 10px 0;border-radius:20px 20px 0 0;box-shadow:0 -2px 20px rgba(0,0,0,.12);font-family:'Lora',Georgia,serif;line-height:1.9;color:#431407;transition:background .4s,color .4s;font-size:24px}
+#page-nav{display:flex;align-items:center;justify-content:center;gap:14px;padding:8px 16px 4px;background:#fff;margin:0 10px;flex-shrink:0;transition:background .4s}
+.nav-btn{background:#FED7AA;border:none;border-radius:20px;color:#EA580C;font-size:14px;font-weight:800;padding:7px 16px;cursor:pointer;font-family:inherit}
+.nav-btn:disabled{opacity:.35;cursor:not-allowed}
+#page-num{font-size:13px;color:#9A3412;font-weight:700}
+
+/* ── Player bar ── */
+#player{position:fixed;bottom:0;left:0;right:0;background:#EA580C;padding:10px 16px;padding-bottom:max(20px,calc(20px + env(safe-area-inset-bottom)));display:flex;align-items:center;justify-content:space-between;gap:10;z-index:100;box-shadow:0 -4px 24px rgba(0,0,0,.2)}
+.c-btn{background:rgba(255,255,255,.18);border:none;border-radius:12px;color:#fff;font-size:22px;width:44px;height:44px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;flex-shrink:0}
+.c-btn:disabled{opacity:.3;cursor:not-allowed}
+#player-center{display:flex;gap:10px;align-items:center;flex:1;justify-content:center}
+#play-btn{background:#fff;border:none;border-radius:28px;color:#EA580C;font-size:16px;font-weight:900;padding:11px 22px;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.22);white-space:nowrap}
+#words-badge{background:rgba(255,255,255,.2);border-radius:14px;padding:5px 10px;color:#fff;font-size:12px;font-weight:800;text-align:center;flex-shrink:0;min-width:44px}
+
+/* ── Word highlight ── */
+.word{cursor:pointer;border-radius:5px;transition:background .08s,color .08s;display:inline;line-height:1.9;padding:2px 1px}
+.word.active{background:#FB923C;color:#fff;font-weight:800;padding:2px 5px}
+
+/* ── Settings controls ── */
+.setting-label{font-size:11px;font-weight:800;margin-bottom:7px;color:#EA580C;text-transform:uppercase;letter-spacing:.06em}
+.speed-btns{display:flex;gap:6px;flex-wrap:wrap}
+.speed-btn{padding:5px 10px;border-radius:20px;border:2px solid #FED7AA;background:transparent;color:#9A3412;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s}
+.speed-btn.active{border-color:#EA580C;background:#EA580C;color:#fff}
+.size-row{display:flex;gap:8px;align-items:center}
+.size-btn{background:transparent;border:2px solid #FED7AA;border-radius:10px;color:#EA580C;font-size:14px;font-weight:800;padding:5px 10px;cursor:pointer;font-family:inherit}
+#voice-select{background:#FFF7ED;border:2px solid #FED7AA;color:#431407;border-radius:12px;padding:7px 10px;font-size:13px;font-family:inherit;font-weight:600;width:100%;max-width:320px}
+.voice-hint{font-size:11px;color:#9A3412;margin-top:5px}
+#voice-wrap{width:100%}
+
+/* ── Header buttons ── */
+.hdr-btn{background:rgba(255,255,255,.2);border:none;border-radius:10px;color:#fff;font-size:20px;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#back-btn{display:none}
+
+/* ── Loading / error ── */
+#loading{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+#loading .spin{font-size:60px;animation:spin 1.2s linear infinite}
+#loading .msg{font-size:20px;color:#EA580C;font-weight:800}
+@keyframes spin{to{transform:rotate(360deg)}}
+#error-box{margin:16px;background:#FEE2E2;color:#991B1B;border-radius:14px;padding:12px 16px;font-size:14px;line-height:1.5}
+#error-box.hidden{display:none}
+
+/* ── Tap hint ── */
+#tap-hint{position:fixed;top:72px;right:12px;background:rgba(0,0,0,.72);color:#fff;border-radius:12px;padding:8px 12px;font-size:11px;max-width:160px;text-align:center;pointer-events:none;z-index:50;line-height:1.55;font-weight:600;border:1px solid rgba(234,88,12,.4)}
+#tap-hint.hidden{display:none}
+
+/* ── Word definition popup ── */
+#word-popup-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+#word-popup-bg.hidden{display:none}
+#word-popup{background:#fff;border:3px solid #EA580C;border-radius:28px;padding:28px 28px 24px;max-width:360px;width:100%;box-shadow:0 12px 48px rgba(0,0,0,.4);animation:popIn .25s cubic-bezier(.34,1.56,.64,1)}
+@keyframes popIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+#popup-top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+#popup-emoji{font-size:48px}
+#popup-word{font-size:30px;font-weight:900;color:#EA580C;line-height:1}
+#popup-phonics{font-size:16px;color:#9A3412;font-weight:700;margin-top:4px;letter-spacing:.05em}
+.popup-section{border-radius:16px;padding:14px 16px;margin-bottom:12px}
+.popup-section-label{font-size:13px;font-weight:800;color:#EA580C;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em}
+.popup-section-text{font-size:17px;line-height:1.6;font-weight:600}
+#popup-example-text{font-style:italic;font-weight:400}
+#popup-btns{display:flex;gap:10px}
+#popup-hear{flex:1;background:#EA580C;border:none;border-radius:16px;color:#fff;font-size:15px;font-weight:800;padding:11px;cursor:pointer;font-family:inherit}
+#popup-close{flex:1;background:#FED7AA;border:none;border-radius:16px;color:#EA580C;font-size:15px;font-weight:800;padding:11px;cursor:pointer;font-family:inherit}
+
+/* ── Star burst ── */
+#burst-layer{position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden}
+.burst-star{position:absolute;opacity:0;animation:sb 1s ease-out forwards}
+@keyframes sb{0%{opacity:0;transform:scale(.3)}40%{opacity:1;transform:scale(1.4)}100%{opacity:0;transform:scale(.7) translateY(-40px)}}
+
+/* ── Night mode ── */
+body.night{background:#0A0705;color:#FEE0C0}
+body.night #header{background:#1C1005}
+body.night #player{background:#1C1005;border-top:2px solid #FB923C}
+body.night #page-content{background:#140D07;color:#FEE0C0}
+body.night #page-nav{background:#140D07}
+body.night .nav-btn{background:#431407;color:#FB923C}
+body.night #settings-panel{background:#140D07;border-color:#431407}
+body.night .setting-label{color:#FB923C}
+body.night .speed-btn{border-color:#431407;color:#F97316}
+body.night .speed-btn.active{border-color:#FB923C;background:#FB923C;color:#140D07}
+body.night .size-btn{border-color:#431407;color:#FB923C}
+body.night #voice-select{background:#1C1005;border-color:#431407;color:#FEE0C0}
+body.night .voice-hint{color:#F97316}
+body.night .book-card{background:#1C1005;border-color:#431407}
+body.night .book-card .bmeta{color:#F97316}
+body.night .book-card .del-btn{border-color:#431407;color:#F97316}
+body.night #library h2{color:#FB923C}
+body.night #library .sub{color:#F97316}
+body.night #empty-lib{color:#F97316}
+body.night #word-popup{background:#1C1005;border-color:#C2410C}
+body.night #popup-word{color:#FB923C}
+body.night #popup-phonics{color:#F97316}
+body.night .popup-section-text{color:#FEE0C0}
+body.night #popup-section-def{background:#431407}
+body.night #popup-section-ex{background:#140D07;border:1px solid #431407}
+body.night #popup-hear{background:#C2410C}
+body.night #popup-close{background:#431407;color:#FB923C}
+body.night #page-num{color:#F97316}
+body.night ::-webkit-scrollbar-thumb{background:#431407}
+body.night .word.active{background:#C2410C;color:#FFF7ED}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Header -->
+  <div id="header">
+    <div id="header-left">
+      <button class="hdr-btn" id="back-btn">←</button>
+      <span style="font-size:26px;flex-shrink:0">📚</span>
+      <div style="min-width:0">
+        <div id="book-title">Story Reader</div>
+        <div id="book-sub" style="display:none"></div>
+      </div>
+    </div>
+    <div id="header-right">
+      <button class="hdr-btn" id="settings-btn" style="display:none">⚙️</button>
+      <button class="hdr-btn" id="night-btn">🌙</button>
+    </div>
+  </div>
+
+  <!-- Settings panel -->
+  <div id="settings-panel" class="hidden">
+    <div>
+      <div class="setting-label">🔊 Speed</div>
+      <div class="speed-btns" id="speed-btns"></div>
+    </div>
+    <div>
+      <div class="setting-label">🔤 Text Size</div>
+      <div class="size-row">
+        <button class="size-btn" id="size-down">A−</button>
+        <span id="size-val" style="font-size:13px;font-weight:700;color:#9A3412;min-width:28px;text-align:center">24</span>
+        <button class="size-btn" id="size-up">A+</button>
+      </div>
+    </div>
+    <div id="voice-wrap">
+      <div class="setting-label">🎙 Voice</div>
+      <select id="voice-select"></select>
+      <div class="voice-hint">★ = on your device (most natural). Try a few!</div>
+    </div>
+  </div>
+
+  <!-- Main content area -->
+  <div id="main">
+
+    <!-- Library screen -->
+    <div id="library">
+      <h2>📚 My Book Library</h2>
+      <div class="sub" id="lib-count">0 books saved</div>
+      <div id="book-list"></div>
+      <div id="empty-lib" style="display:none">
+        <div class="em">📭</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px">No books yet!</div>
+        <div style="font-size:14px;opacity:.7">Tap the button below to add your first book.</div>
+      </div>
+      <label id="add-fab">
+        ＋ Add Book
+        <input type="file" accept=".pdf,.epub,.mobi,.azw,.azw3,.kfx,.txt" id="lib-file-input">
+      </label>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" style="display:none">
+      <div class="spin">📖</div>
+      <div class="msg" id="load-msg">Loading…</div>
+    </div>
+
+    <!-- Error -->
+    <div id="error-box" class="hidden"></div>
+
+    <!-- Reader screen -->
+    <div id="reader" style="display:none">
+      <div id="page-content"></div>
+      <div id="page-nav">
+        <button class="nav-btn" id="prev-btn">◀ Prev</button>
+        <span id="page-num">1 / 1</span>
+        <button class="nav-btn" id="next-btn">Next ▶</button>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+
+  <!-- Player bar -->
+  <div id="player" style="display:none">
+    <label class="c-btn" style="cursor:pointer" title="Open book">
+      📂<input type="file" accept=".pdf,.epub,.mobi,.azw,.azw3,.kfx,.txt" id="player-file-input" style="display:none">
+    </label>
+    <div id="player-center">
+      <button class="c-btn" id="p-prev">⏮</button>
+      <button id="play-btn">▶ Read to me!</button>
+      <button class="c-btn" id="p-stop" style="display:none">⏹</button>
+      <button class="c-btn" id="p-next">⏭</button>
+    </div>
+    <div id="words-badge">⭐<br><span id="word-count">0</span></div>
+  </div>
+
+  <!-- Tap hint -->
+  <div id="tap-hint" class="hidden">👆 Tap a word to look it up!</div>
+
+  <!-- Word definition popup -->
+  <div id="word-popup-bg" class="hidden">
+    <div id="word-popup">
+      <div id="popup-top">
+        <span id="popup-emoji">📖</span>
+        <div>
+          <div id="popup-word"></div>
+          <div id="popup-phonics"></div>
+        </div>
+      </div>
+      <div class="popup-section" id="popup-section-def" style="background:#FED7AA">
+        <div class="popup-section-label">What it means</div>
+        <div class="popup-section-text" id="popup-def-text"></div>
+      </div>
+      <div class="popup-section" id="popup-section-ex" style="background:#FFF7ED;border:1px solid #FED7AA">
+        <div class="popup-section-label">In a sentence</div>
+        <div class="popup-section-text" id="popup-example-text"></div>
+      </div>
+      <div id="popup-btns">
+        <button id="popup-hear">🔊 Hear it</button>
+        <button id="popup-close">✓ Got it!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Star burst layer -->
+  <div id="burst-layer"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// STORY READER PWA — main.js
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── PDF.js worker ──────────────────────────────────────────────────────────
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+// ── State ──────────────────────────────────────────────────────────────────
+let state = {
+  screen: 'library',        // 'library' | 'reader'
+  books: [],                // [{id,title,pages,addedAt,lastPage}]
+  bookContents: {},         // id → string[]
+  activeBook: null,
+  pages: [],
+  pageIndex: 0,
+  isReading: false,
+  isPaused: false,
+  activeSentIdx: -1,
+  activeWordIdx: -1,
+  wordsRead: 0,
+  nightMode: false,
+  speedIdx: 1,
+  fontSize: 24,
+  voiceIdx: 0,
+  allVoices: [],
+  sentenceTokens: [],       // [[{type,value}]]
+  sentences: [],
+};
+
+// Refs
+let readingActive = false;
+let pausedFlag    = false;
+let sentIdxNow    = 0;
+let pageIdxNow    = 0;
+let currentVoice  = null;
+let currentSpeed  = { rate:0.70, pitch:1.04 };
+let wordEls       = {};     // `${si}-${wi}` → span
+
+// ── Speeds ──────────────────────────────────────────────────────────────────
+const SPEEDS = [
+  { label:'🐌 Very Slow', rate:0.55, pitch:1.06 },
+  { label:'🐢 Slow',      rate:0.70, pitch:1.04 },
+  { label:'📖 Normal',    rate:0.88, pitch:1.0  },
+  { label:'🚀 Fast',      rate:1.10, pitch:0.97 },
+];
+
+// ── Dictionary ─────────────────────────────────────────────────────────────
+const DICT = {
+  cat:{e:'🐱',d:'A small furry pet that purrs and says meow.',x:'The cat curled up on the warm rug.'},
+  dog:{e:'🐶',d:'A friendly pet that barks and loves to play fetch.',x:'The dog wagged its tail with joy.'},
+  rabbit:{e:'🐰',d:'A fluffy animal with big ears and a little fluffy tail.',x:'The rabbit hopped across the garden.'},
+  bear:{e:'🐻',d:'A big, furry wild animal that loves to eat honey.',x:'The bear splashed in the river to catch fish.'},
+  elephant:{e:'🐘',d:'The biggest land animal, with a long nose called a trunk.',x:'The elephant sprayed water with its trunk.'},
+  lion:{e:'🦁',d:'A big wild cat with a loud roar, called the king of the jungle.',x:'The lion let out a mighty roar.'},
+  tiger:{e:'🐯',d:'A big wild cat with orange fur and black stripes.',x:'The tiger crept silently through the trees.'},
+  fox:{e:'🦊',d:'A clever animal with red fur and a bushy tail.',x:'The clever fox outwitted the other animals.'},
+  wolf:{e:'🐺',d:'A wild animal that looks like a big dog and howls at the moon.',x:'The wolf howled at the bright full moon.'},
+  bird:{e:'🐦',d:'An animal with wings and feathers that can fly through the sky.',x:'A little bird sang outside the window.'},
+  fish:{e:'🐟',d:'An animal that lives in water and breathes through gills.',x:'The fish swam happily through the coral reef.'},
+  frog:{e:'🐸',d:'A small green animal that jumps and says ribbit.',x:'The frog jumped into the cool pond with a splash.'},
+  duck:{e:'🦆',d:'A bird that can swim in water and says quack.',x:'The duck waddled to the edge of the pond.'},
+  horse:{e:'🐴',d:'A large animal that people ride, with hooves and a mane.',x:'The horse galloped across the open field.'},
+  cow:{e:'🐮',d:'A big farm animal that gives us milk and says moo.',x:'The cow munched contentedly on the green grass.'},
+  butterfly:{e:'🦋',d:'A beautiful insect with colourful wings that flies from flower to flower.',x:'A butterfly landed gently on the flower.'},
+  bee:{e:'🐝',d:'A buzzing insect that makes honey and helps flowers grow.',x:'The busy bee flew from flower to flower.'},
+  dragon:{e:'🐉',d:'A magical creature in stories that can breathe fire and fly.',x:'The dragon swooped down from the mountain.'},
+  unicorn:{e:'🦄',d:'A magical horse with a horn on its head from fairy tales.',x:'The unicorn galloped through the enchanted forest.'},
+  tree:{e:'🌳',d:'A tall plant with a thick trunk, branches and leaves.',x:'The children climbed the big old tree in the garden.'},
+  flower:{e:'🌸',d:'The colourful part of a plant that smells nice and attracts bees.',x:'She picked a pretty flower to give to her mum.'},
+  sun:{e:'☀️',d:'The giant ball of fire in the sky that gives us light and warmth.',x:'The warm sun shone down on the garden.'},
+  moon:{e:'🌙',d:'The round glowing object in the night sky.',x:'The moon lit up the dark night sky.'},
+  star:{e:'⭐',d:'A tiny dot of light you see in the sky at night, far away in space.',x:'She made a wish upon a bright star.'},
+  rain:{e:'🌧️',d:'Water that falls from clouds in the sky.',x:'The rain pattered gently on the rooftop.'},
+  snow:{e:'❄️',d:'Soft white frozen water that falls from the sky in winter.',x:'The children played in the fresh white snow.'},
+  cloud:{e:'☁️',d:'A fluffy white or grey shape in the sky made of tiny water droplets.',x:'She found animals in the shapes of the clouds.'},
+  wind:{e:'💨',d:'Air that is moving, which can be a gentle breeze or a strong gust.',x:'The wind blew the leaves off the trees.'},
+  river:{e:'🏞️',d:'A long stream of water that flows through the land to the sea.',x:'They paddled their boat down the winding river.'},
+  mountain:{e:'⛰️',d:'A very tall hill made of rock that reaches high into the sky.',x:'They hiked up the steep mountain trail.'},
+  forest:{e:'🌲',d:'A large area of land covered with lots of trees.',x:'The children explored the deep, dark forest.'},
+  ocean:{e:'🌊',d:'A huge area of salty water that covers most of the Earth.',x:'The waves crashed onto the sandy beach.'},
+  island:{e:'🏝️',d:'A piece of land that has water all around it.',x:'They sailed to a tiny tropical island.'},
+  cave:{e:'🕳️',d:'A dark hollow space inside a rock or underground.',x:'The bear slept in its warm cave all winter.'},
+  happy:{e:'😊',d:'Feeling really good, joyful and full of smiles.',x:'She was happy when she opened her birthday present.'},
+  sad:{e:'😢',d:'Feeling unhappy, like you might want to cry.',x:'He felt sad when his favourite toy broke.'},
+  angry:{e:'😠',d:'Feeling very cross and upset about something.',x:'She was angry when her brother took her book.'},
+  scared:{e:'😨',d:'Feeling frightened because something seems dangerous or strange.',x:'He felt scared when he heard a loud noise at night.'},
+  brave:{e:'🦸',d:'Not being afraid to do something hard or scary.',x:'The brave girl stepped forward to help.'},
+  kind:{e:'💛',d:'Being friendly, caring and gentle towards other people.',x:'It was kind of him to share his sweets.'},
+  shy:{e:'🙈',d:'Feeling nervous or uncomfortable around people you don\'t know well.',x:'The shy girl hid behind her mum at the party.'},
+  excited:{e:'🤩',d:'Feeling full of energy and happiness about something coming up.',x:'She was so excited about her birthday party!'},
+  lonely:{e:'🥺',d:'Feeling sad because you are on your own and want company.',x:'The puppy felt lonely when left home alone.'},
+  proud:{e:'🌟',d:'Feeling very pleased about something good you or someone else has done.',x:'He was proud when he finished reading the whole book.'},
+  run:{e:'🏃',d:'To move your legs very fast, faster than walking.',x:'She had to run to catch the bus.'},
+  jump:{e:'🦘',d:'To push off the ground with your feet and go up into the air.',x:'He jumped as high as he could to reach the branch.'},
+  fly:{e:'🦅',d:'To move through the air, like a bird with wings.',x:'The eagle soared and flew above the clouds.'},
+  climb:{e:'🧗',d:'To go up something, like a tree or a ladder, using your hands and feet.',x:'She climbed to the very top of the tree.'},
+  swim:{e:'🏊',d:'To move through water using your arms and legs.',x:'The children swam in the cool blue pool.'},
+  sleep:{e:'😴',d:'To rest with your eyes closed, which your body needs every night.',x:'The kitten curled up and fell fast asleep.'},
+  laugh:{e:'😂',d:'To make a happy sound when something is funny.',x:'They all laughed at the silly joke.'},
+  whisper:{e:'🤫',d:'To speak very softly so only one person can hear.',x:'She leaned over and whispered the secret in his ear.'},
+  shout:{e:'📢',d:'To speak in a very loud voice.',x:'He shouted to his friend across the playground.'},
+  big:{e:'🐘',d:'Large in size — the opposite of small.',x:'The big elephant was as tall as the trees.'},
+  small:{e:'🐭',d:'Little in size — the opposite of big.',x:'The small mouse hid under the cupboard.'},
+  fast:{e:'⚡',d:'Moving quickly, not taking much time.',x:'The fast cheetah outran all the other animals.'},
+  slow:{e:'🐌',d:'Not moving quickly, taking a long time.',x:'The slow snail made its way across the path.'},
+  dark:{e:'🌑',d:'With little or no light, the opposite of bright.',x:'It was so dark in the cave she needed a torch.'},
+  bright:{e:'💡',d:'Giving out a lot of light, or very vivid in colour.',x:'The bright stars lit up the night sky.'},
+  magic:{e:'✨',d:'Something wonderful that seems impossible or is done by a wizard.',x:'She waved the wand and magic sparkles filled the air.'},
+  enormous:{e:'🌋',d:'Extremely big — much bigger than usual.',x:'The enormous giant could see for miles.'},
+  tiny:{e:'🔬',d:'Very, very small — almost too small to see.',x:'A tiny fairy sat on the flower petal.'},
+  beautiful:{e:'🌺',d:'Very pretty and lovely to look at.',x:'The princess wore a beautiful golden dress.'},
+  strange:{e:'🤔',d:'Unusual or odd — not what you would normally expect.',x:'A strange noise came from behind the door.'},
+  mysterious:{e:'🔮',d:'Hard to understand or explain, like a secret waiting to be discovered.',x:'The old house had a mysterious glow.'},
+  adventure:{e:'🗺️',d:'An exciting journey or experience full of surprises.',x:'The friends set off on a great adventure.'},
+  treasure:{e:'💎',d:'Very valuable things like gold, jewels, or something you love dearly.',x:'They followed the map to find the buried treasure.'},
+  journey:{e:'🚀',d:'A long trip from one place to another.',x:'Their journey took them through many strange lands.'},
+  castle:{e:'🏰',d:'A large stone building where kings and queens used to live.',x:'The princess looked out from the top of the castle.'},
+  kingdom:{e:'👑',d:'A land or country that is ruled by a king or queen.',x:'Peace returned to the kingdom at last.'},
+  wizard:{e:'🧙',d:'A person in stories who can do magic spells.',x:'The old wizard cast a spell to help them.'},
+  witch:{e:'🧙‍♀️',d:'A woman in stories who uses magic, sometimes good and sometimes bad.',x:'The witch stirred her bubbling cauldron.'},
+  fairy:{e:'🧚',d:'A tiny magical creature with wings from fairy tales.',x:'The fairy sprinkled dust and made a wish come true.'},
+  giant:{e:'🗿',d:'A person in stories who is incredibly tall and enormous.',x:'The giant\'s footsteps shook the ground.'},
+  prince:{e:'🤴',d:'The son of a king or queen.',x:'The prince rode his horse to rescue the princess.'},
+  princess:{e:'👸',d:'The daughter of a king or queen.',x:'The princess was kind to everyone in the kingdom.'},
+  quest:{e:'🗺️',d:'An important and exciting journey to find or do something.',x:'The hero began his quest to find the golden key.'},
+  secret:{e:'🤫',d:'Something you know that you don\'t tell other people.',x:'She kept the secret safe in her heart.'},
+  friend:{e:'🤝',d:'Someone you like very much and enjoy spending time with.',x:'He was the best friend she had ever had.'},
+  family:{e:'👨‍👩‍👧‍👦',d:'The people who are related to you, like parents, brothers and sisters.',x:'Her whole family gathered for the celebration.'},
+  home:{e:'🏠',d:'The place where you live and feel safe and comfortable.',x:'There is no place quite like home.'},
+  through:{e:'🚪',d:'Going in one side and out the other side of something.',x:'She walked through the magic door.'},
+  because:{e:'💭',d:'A word used to explain the reason for something.',x:'She smiled because she was very happy.'},
+  together:{e:'🤝',d:'With each other, at the same time or in the same place.',x:'They worked together to solve the puzzle.'},
+  suddenly:{e:'⚡',d:'Happening very quickly and without any warning.',x:'Suddenly, the sky turned dark.'},
+  perhaps:{e:'🤷',d:'Maybe — used when something might be true but you are not sure.',x:'Perhaps the treasure was hidden in the old tower.'},
+  always:{e:'♾️',d:'Every single time, without exception, for ever.',x:'She always remembered to say thank you.'},
+  never:{e:'🚫',d:'Not ever — not even once.',x:'He had never seen anything so amazing.'},
+  everything:{e:'🌍',d:'All the things there are — not leaving anything out.',x:'Everything in the garden looked magical.'},
+  something:{e:'📦',d:'A thing that is not known exactly or not named.',x:'Something rustled in the bushes.'},
+  someone:{e:'👤',d:'A person, but you are not saying exactly who.',x:'Someone knocked on the old wooden door.'},
+  everyone:{e:'👥',d:'Every single person in a group.',x:'Everyone cheered when she crossed the finish line.'},
+  once:{e:'1️⃣',d:'One time only, or a long time ago.',x:'Once upon a time, in a land far away...'},
+  until:{e:'⏳',d:'Up to the time when something happens.',x:'She waited until the stars came out.'},
+  beyond:{e:'🌅',d:'On the far side of something, or further than something.',x:'Beyond the mountains lay the enchanted valley.'},
+  beneath:{e:'⬇️',d:'Under or below something.',x:'Beneath the old tree was a tiny door.'},
+  across:{e:'↔️',d:'From one side to the other side of something.',x:'They sailed across the wide blue sea.'},
+  between:{e:'↕️',d:'In the middle of two things or people.',x:'The path ran between the two tall trees.'},
+  above:{e:'⬆️',d:'Higher up than something else.',x:'The birds soared above the clouds.'},
+  below:{e:'⬇️',d:'Lower than or under something else.',x:'The fish darted below the surface of the water.'},
+  ancient:{e:'🏺',d:'Very, very old — from a long time ago in history.',x:'They found an ancient map in the old chest.'},
+  potion:{e:'🧪',d:'A magical drink in stories that does something special.',x:'One sip of the potion made her invisible.'},
+  spell:{e:'✨',d:'A set of magic words that makes something happen.',x:'The wizard said the spell and the door opened.'},
+  sword:{e:'⚔️',d:'A long sharp weapon with a handle, used by knights in stories.',x:'The knight held his sword up high.'},
+  shield:{e:'🛡️',d:'A flat object held to protect yourself, used by knights.',x:'She raised her shield to block the blow.'},
+};
+
+const SYLLABLE_OVERRIDES = {
+  beautiful:'beau-ti-ful',everything:'ev-ery-thing',everyone:'ev-ery-one',
+  something:'some-thing',anything:'an-y-thing',together:'to-geth-er',
+  because:'be-cause',adventure:'ad-ven-ture',suddenly:'sud-den-ly',
+  perhaps:'per-haps',princess:'prin-cess',ancient:'an-cient',between:'be-tween',
+  beneath:'be-neath',beyond:'be-yond',toward:'to-ward',across:'a-cross',
+  above:'a-bove',below:'be-low',mountain:'moun-tain',enormous:'e-nor-mous',
+  mysterious:'mys-ter-i-ous',treasure:'treas-ure',journey:'jour-ney',
+  kingdom:'king-dom',butterfly:'but-ter-fly',elephant:'el-e-phant',
+  unicorn:'u-ni-corn',castle:'cas-tle',always:'al-ways',never:'nev-er',
+  magic:'mag-ic',dragon:'drag-on',wizard:'wiz-ard',
+};
+
+function syllabify(w) {
+  if (SYLLABLE_OVERRIDES[w]) return SYLLABLE_OVERRIDES[w];
+  if (w.length <= 3) return w;
+  const vowels = 'aeiou';
+  let result = '', last = 0;
+  for (let i = 1; i < w.length - 1; i++) {
+    const pV = vowels.includes(w[i-1]);
+    const cC = !vowels.includes(w[i]);
+    const nV = vowels.includes(w[i+1]);
+    if (pV && cC && nV && i - last >= 2) { result += w.slice(last,i) + '-'; last = i; }
+    else if (!vowels.includes(w[i-1]) && cC && nV && i - last >= 3) { result += w.slice(last,i) + '-'; last = i; }
+  }
+  result += w.slice(last);
+  return result.replace(/-([a-z])$/, '$1');
+}
+
+function getDefinition(word) {
+  const w = word.toLowerCase().replace(/[^a-z]/g,'');
+  const entry = DICT[w];
+  const phonics = syllabify(w);
+  if (entry) return { word:w, phonics, definition:entry.d, example:entry.x, emoji:entry.e };
+  return {
+    word: w, phonics,
+    definition: `"${w}" is a word from your story. Ask a grown-up what it means!`,
+    example: `Can you use the word "${w}" in your own sentence?`,
+    emoji: '📖',
+  };
+}
+
+// ── Text helpers ────────────────────────────────────────────────────────────
+function cleanText(raw) {
+  return raw
+    .replace(/\r\n|\r/g,'\n').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n')
+    .replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"')
+    .replace(/\u2014/g,' — ').replace(/\u2013/g,' – ').replace(/\u2026/g,'...')
+    .replace(/[^\x20-\x7E\n]/g,' ').trim();
+}
+
+function splitSentences(text) {
+  return text.replace(/\s+/g,' ').trim()
+    .split(/(?<=[.!?]["']?\s)/)
+    .map(s=>s.trim()).filter(s=>s.length>1);
+}
+
+function tokenize(sentence) {
+  return sentence.split(/(\s+)/).filter(Boolean)
+    .map(p=>({type:/^\s+$/.test(p)?'space':'word',value:p}));
+}
+
+function ttsText(s) {
+  return s.replace(/,(\s*)/g,',  ').replace(/;(\s*)/g,';  ')
+           .replace(/ — /g,',  ').replace(/\.\.\./g,'...  ');
+}
+
+function htmlToText(html) {
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  d.querySelectorAll('script,style,head,nav').forEach(n=>n.remove());
+  d.querySelectorAll('p,div,h1,h2,h3,h4,li,br').forEach(n=>n.insertAdjacentText('afterend','\n'));
+  return d.textContent||'';
+}
+
+// ── File parsers ────────────────────────────────────────────────────────────
+async function parsePDF(file) {
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+  const pages=[];
+  for(let p=1;p<=pdf.numPages;p++){
+    const pg=await pdf.getPage(p);
+    const ct=await pg.getTextContent();
+    let lastY=null,txt='';
+    ct.items.forEach(it=>{
+      const y=it.transform?.[5]??0;
+      if(lastY!==null&&Math.abs(y-lastY)>12)txt+='\n';
+      txt+=it.str+' '; lastY=y;
+    });
+    const c=cleanText(txt);
+    if(c.length>20)pages.push(c);
+  }
+  return pages;
+}
+
+async function parseEPUB(file) {
+  const buf=await file.arrayBuffer();
+  const zip=await JSZip.loadAsync(buf);
+  const containerXml=await zip.file('META-INF/container.xml')?.async('text');
+  if(!containerXml)throw new Error('Not a valid EPUB');
+  const opfPath=containerXml.match(/full-path="([^"]+\.opf)"/)?.[1];
+  const opfText=await zip.file(opfPath)?.async('text');
+  const opfDir=opfPath.includes('/')?opfPath.split('/').slice(0,-1).join('/')+'/':'';
+  const parser=new DOMParser();
+  const opfDoc=parser.parseFromString(opfText,'text/xml');
+  const items={};
+  opfDoc.querySelectorAll('manifest item').forEach(i=>items[i.getAttribute('id')]=i.getAttribute('href'));
+  const spineIds=[...opfDoc.querySelectorAll('spine itemref')].map(i=>i.getAttribute('idref'));
+  const chapters=[];
+  for(const id of spineIds){
+    const href=items[id];if(!href)continue;
+    const html=await zip.file(opfDir+href)?.async('text');if(!html)continue;
+    const t=cleanText(htmlToText(html));
+    if(t.length>30)chapters.push(t);
+  }
+  const pages=[];
+  for(const ch of chapters){
+    if(ch.length<300){if(pages.length)pages[pages.length-1]+='\n'+ch;else pages.push(ch);continue;}
+    const paras=ch.split(/\n\n+/);let cur='';
+    for(const para of paras){
+      if(cur.length+para.length>3000&&cur.length>0){pages.push(cur.trim());cur=para;}
+      else cur+=(cur?'\n\n':'')+para;
+    }
+    if(cur.trim())pages.push(cur.trim());
+  }
+  return pages;
+}
+
+async function parseTXT(file) {
+  const t=cleanText(await file.text());
+  const paras=t.split(/\n\n+/);const pages=[];let cur='';
+  for(const p of paras){
+    if(cur.length+p.length>3000&&cur.length>0){pages.push(cur.trim());cur=p;}
+    else cur+=(cur?'\n\n':'')+p;
+  }
+  if(cur.trim())pages.push(cur.trim());
+  return pages;
+}
+
+async function parseMOBI(file) {
+  const buf=await file.arrayBuffer();
+  const raw=new TextDecoder('utf-8',{fatal:false}).decode(new Uint8Array(buf));
+  const readable=raw.replace(/<[^>]*>/g,' ').replace(/[^\x20-\x7E\n]/g,' ').replace(/\s+/g,' ').trim();
+  if(readable.length<100)throw new Error('Could not read this Kindle file. Try converting to EPUB using the free Calibre app first.');
+  const pages=[];
+  for(let i=0;i<readable.length;i+=3000){
+    const c=readable.slice(i,i+3000).trim();
+    if(c.length>20)pages.push(c);
+  }
+  return pages;
+}
+
+// ── LocalStorage library persistence ───────────────────────────────────────
+function saveLibrary() {
+  try { localStorage.setItem('story-reader-library', JSON.stringify(state.books)); } catch(e){}
+}
+function loadLibrary() {
+  try {
+    const d = localStorage.getItem('story-reader-library');
+    if(d) state.books = JSON.parse(d);
+  } catch(e){}
+}
+
+// ── Voice loading ───────────────────────────────────────────────────────────
+function scoreVoice(v) {
+  const n=v.name.toLowerCase();
+  if(/neural|enhanced|premium|natural/.test(n)) return 100;
+  if(/samantha|karen|daniel|moira|fiona|tessa/.test(n)) return 90;
+  if(/aria|jenny|libby|sonia|ryan|clara|guy/.test(n)) return 88;
+  if(/google uk english female/.test(n)) return 85;
+  if(/google uk english male/.test(n)) return 82;
+  if(/google us english/.test(n)) return 78;
+  if(v.localService&&v.lang.startsWith('en')) return 60;
+  if(v.lang.startsWith('en')) return 40;
+  return 0;
+}
+function loadVoices() {
+  const all = speechSynthesis.getVoices().filter(v=>v.lang.startsWith('en'))
+    .sort((a,b)=>scoreVoice(b)-scoreVoice(a));
+  state.allVoices = all;
+  currentVoice = all[state.voiceIdx]||null;
+  const sel = document.getElementById('voice-select');
+  sel.innerHTML = '';
+  all.forEach((v,i)=>{
+    const o=document.createElement('option');
+    o.value=i; o.textContent=`${v.name} (${v.lang})${v.localService?' ★':''}`;
+    sel.appendChild(o);
+  });
+  sel.value = state.voiceIdx;
+}
+
+// ── TTS ────────────────────────────────────────────────────────────────────
+function speakSentence(pIdx, sIdx) {
+  speechSynthesis.cancel();
+  const pageText = state.pages[pIdx]||'';
+  const sents = splitSentences(pageText);
+  if(sIdx>=sents.length){
+    const next=pIdx+1;
+    if(next<state.pages.length){
+      state.pageIndex=next; pageIdxNow=next;
+      updateLastPage(next);
+      renderPage();
+      updatePageNav();
+      setTimeout(()=>{ if(readingActive) speakSentence(next,0); },600);
+    } else {
+      readingActive=false;
+      state.isReading=false; state.isPaused=false;
+      updatePlayBtn();
+      showBurst();
+    }
+    return;
+  }
+  state.activeSentIdx=sIdx; sentIdxNow=sIdx;
+  const toks=tokenize(sents[sIdx]);
+  const words=toks.filter(t=>t.type==='word').map(t=>t.value);
+  if(!words.length){ speakSentence(pIdx,sIdx+1); return; }
+
+  const utter=new SpeechSynthesisUtterance(ttsText(words.join(' ')));
+  utter.rate=currentSpeed.rate; utter.pitch=currentSpeed.pitch;
+  if(currentVoice) utter.voice=currentVoice;
+
+  utter.onboundary=(e)=>{
+    if(e.name!=='word') return;
+    let cc=0;
+    for(let i=0;i<words.length;i++){
+      if(cc>=e.charIndex){
+        highlightWord(sIdx,i);
+        state.wordsRead++;
+        document.getElementById('word-count').textContent=state.wordsRead;
+        break;
+      }
+      cc+=words[i].length+1;
+    }
+  };
+  utter.onend=()=>{
+    if(!readingActive||pausedFlag)return;
+    clearHighlight();
+    speakSentence(pIdx,sIdx+1);
+  };
+  utter.onerror=(e)=>{
+    if(e.error==='interrupted'||e.error==='canceled')return;
+    if(readingActive) speakSentence(pIdx,sIdx+1);
+  };
+  speechSynthesis.speak(utter);
+}
+
+function startReading(){
+  if(!state.pages.length)return;
+  readingActive=true; pausedFlag=false;
+  state.isReading=true; state.isPaused=false;
+  updatePlayBtn();
+  hideTapHint();
+  speakSentence(state.pageIndex, state.activeSentIdx>=0?state.activeSentIdx:0);
+}
+function pauseReading(){
+  speechSynthesis.pause(); pausedFlag=true;
+  state.isPaused=true; updatePlayBtn();
+}
+function resumeReading(){
+  speechSynthesis.resume(); pausedFlag=false;
+  state.isPaused=false; updatePlayBtn();
+}
+function stopReading(){
+  readingActive=false; pausedFlag=false;
+  speechSynthesis.cancel();
+  state.isReading=false; state.isPaused=false;
+  state.activeSentIdx=-1; state.activeWordIdx=-1;
+  clearHighlight(); updatePlayBtn();
+  showTapHint();
+}
+
+function highlightWord(si, wi) {
+  clearHighlight();
+  state.activeSentIdx=si; state.activeWordIdx=wi;
+  const el=wordEls[`${si}-${wi}`];
+  if(el){
+    el.classList.add('active');
+    el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+}
+function clearHighlight(){
+  document.querySelectorAll('.word.active').forEach(el=>el.classList.remove('active'));
+}
+
+// ── Page rendering ──────────────────────────────────────────────────────────
+function renderPage(){
+  const content=document.getElementById('page-content');
+  content.style.fontSize=state.fontSize+'px';
+  wordEls={};
+  const text=state.pages[state.pageIndex]||'';
+  const sents=splitSentences(text);
+  let html='';
+  sents.forEach((sent,si)=>{
+    const toks=tokenize(sent);
+    let wi=-1;
+    toks.forEach(tok=>{
+      if(tok.type==='space'){html+=tok.value.replace(/\n\n/g,'<br><br>').replace(/\n/g,' ');}
+      else{
+        wi++;
+        const clean=tok.value.toLowerCase().replace(/[^a-z]/g,'');
+        html+=`<span class="word" data-si="${si}" data-wi="${wi}" data-word="${clean}">${tok.value}</span>`;
+      }
+    });
+  });
+  content.innerHTML=html;
+  // Register word elements and click handlers
+  content.querySelectorAll('.word').forEach(el=>{
+    const si=+el.dataset.si, wi=+el.dataset.wi;
+    wordEls[`${si}-${wi}`]=el;
+    el.addEventListener('click',()=>{
+      const w=el.dataset.word;
+      if(w&&w.length>=2) showWordPopup(w);
+    });
+  });
+}
+
+function updatePageNav(){
+  document.getElementById('page-num').textContent=`${state.pageIndex+1} / ${state.pages.length}`;
+  document.getElementById('prev-btn').disabled=state.pageIndex===0;
+  document.getElementById('next-btn').disabled=state.pageIndex===state.pages.length-1;
+  document.getElementById('p-prev').disabled=state.pageIndex===0;
+  document.getElementById('p-next').disabled=state.pageIndex===state.pages.length-1;
+}
+
+function goPage(dir){
+  stopReading();
+  const next=state.pageIndex+dir;
+  if(next<0||next>=state.pages.length)return;
+  state.pageIndex=next; pageIdxNow=next;
+  updateLastPage(next);
+  renderPage(); updatePageNav();
+}
+
+// ── Book library ────────────────────────────────────────────────────────────
+function updateLastPage(p){
+  if(!state.activeBook)return;
+  state.books=state.books.map(b=>b.id===state.activeBook.id?{...b,lastPage:p}:b);
+  saveLibrary();
+}
+
+function renderLibrary(){
+  const list=document.getElementById('book-list');
+  const empty=document.getElementById('empty-lib');
+  document.getElementById('lib-count').textContent=`${state.books.length} book${state.books.length!==1?'s':''} saved`;
+  if(!state.books.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  const icons=['📗','📘','📙','📕','📓'];
+  list.innerHTML=state.books.map((b,i)=>`
+    <div class="book-card" data-id="${b.id}">
+      <div class="icon">${icons[i%5]}</div>
+      <div class="info">
+        <div class="btitle">${b.title}</div>
+        <div class="bmeta">${b.pages} pages · Added ${new Date(b.addedAt).toLocaleDateString()}</div>
+        ${b.lastPage>0?`<div class="badge">📖 Page ${b.lastPage+1}</div>`:''}
+      </div>
+      <button class="del-btn" data-del="${b.id}">🗑</button>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.book-card').forEach(card=>{
+    card.addEventListener('click', e=>{
+      if(e.target.dataset.del)return;
+      const id=card.dataset.id;
+      const meta=state.books.find(b=>b.id===id);
+      if(meta) openBook(meta);
+    });
+  });
+  list.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      const id=btn.dataset.del;
+      state.books=state.books.filter(b=>b.id!==id);
+      delete state.bookContents[id];
+      saveLibrary();
+      renderLibrary();
+    });
+  });
+}
+
+function openBook(meta){
+  const content=state.bookContents[meta.id];
+  if(!content||!content.length){
+    showError('Book content not found. Please re-add the file using ＋ Add Book.');
+    return;
+  }
+  stopReading();
+  state.activeBook=meta;
+  state.pages=content;
+  state.pageIndex=meta.lastPage||0;
+  pageIdxNow=state.pageIndex;
+  state.wordsRead=0;
+  document.getElementById('word-count').textContent='0';
+  setScreen('reader');
+  renderPage();
+  updatePageNav();
+}
+
+// ── File processing ─────────────────────────────────────────────────────────
+async function processFile(file){
+  if(!file)return;
+  stopReading();
+  hideError();
+  showLoading('Opening book…');
+  try{
+    const name=file.name.toLowerCase();
+    let pages=[];
+    if(name.endsWith('.pdf')){ setLoadMsg('Reading PDF…'); pages=await parsePDF(file); }
+    else if(name.endsWith('.epub')){ setLoadMsg('Unpacking EPUB…'); pages=await parseEPUB(file); }
+    else if(name.endsWith('.txt')||name.endsWith('.text')){ setLoadMsg('Reading text…'); pages=await parseTXT(file); }
+    else if(/\.(mobi|azw|azw3|kfx)$/.test(name)){ setLoadMsg('Reading Kindle file…'); pages=await parseMOBI(file); }
+    else throw new Error('Unsupported format. Use PDF, EPUB, MOBI, AZW, AZW3 or TXT.');
+    if(!pages.length)throw new Error('No readable text found in this file.');
+
+    const id=`book_${Date.now()}`;
+    const title=file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+    const meta={id,title,pages:pages.length,addedAt:Date.now(),lastPage:0};
+    state.books.push(meta);
+    state.bookContents[id]=pages;
+    saveLibrary();
+    hideLoading();
+    openBook(meta);
+    renderLibrary();
+  }catch(e){
+    hideLoading();
+    showError(e.message||'Could not read this file.');
+  }
+}
+
+// ── Word popup ──────────────────────────────────────────────────────────────
+let popupWord='';
+function showWordPopup(word){
+  stopReading();
+  popupWord=word;
+  const def=getDefinition(word);
+  document.getElementById('popup-emoji').textContent=def.emoji;
+  document.getElementById('popup-word').textContent=def.word;
+  document.getElementById('popup-phonics').textContent='🔤 '+def.phonics;
+  document.getElementById('popup-def-text').textContent=def.definition;
+  document.getElementById('popup-example-text').textContent=def.example;
+  document.getElementById('word-popup-bg').classList.remove('hidden');
+  // Speak word
+  const u=new SpeechSynthesisUtterance(def.word);
+  u.rate=0.65; u.pitch=1.1;
+  if(currentVoice)u.voice=currentVoice;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+function hideWordPopup(){
+  document.getElementById('word-popup-bg').classList.add('hidden');
+  speechSynthesis.cancel();
+}
+
+// ── Star burst ──────────────────────────────────────────────────────────────
+function showBurst(){
+  const layer=document.getElementById('burst-layer');
+  layer.innerHTML='';
+  const stars=['⭐','🌟','✨','💫','🎉','🎊','🌈','❤️'];
+  for(let i=0;i<18;i++){
+    const a=(i/18)*360, d=70+Math.random()*140;
+    const x=50+Math.cos(a*Math.PI/180)*d*0.4;
+    const y=45+Math.sin(a*Math.PI/180)*d*0.22;
+    const el=document.createElement('div');
+    el.className='burst-star';
+    el.style.cssText=`left:${x}%;top:${y}%;font-size:${18+Math.random()*20}px;animation-delay:${i*40}ms`;
+    el.textContent=stars[i%8];
+    layer.appendChild(el);
+  }
+  setTimeout(()=>layer.innerHTML='',1200);
+}
+
+// ── Screen management ───────────────────────────────────────────────────────
+function setScreen(s){
+  state.screen=s;
+  document.getElementById('library').style.display=s==='library'?'':'none';
+  document.getElementById('reader').style.display=s==='reader'?'flex':'none';
+  document.getElementById('player').style.display=s==='reader'?'flex':'none';
+  document.getElementById('back-btn').style.display=s==='reader'?'flex':'none';
+  document.getElementById('settings-btn').style.display=s==='reader'?'flex':'none';
+  if(s==='library'){
+    document.getElementById('book-title').textContent='Story Reader';
+    document.getElementById('book-sub').style.display='none';
+    document.getElementById('settings-panel').classList.add('hidden');
+    renderLibrary();
+  } else {
+    document.getElementById('book-title').textContent=state.activeBook?.title||'Reading';
+    document.getElementById('book-sub').style.display='block';
+    updateBookSub();
+    showTapHint();
+  }
+}
+
+function updateBookSub(){
+  document.getElementById('book-sub').textContent=
+    `Page ${state.pageIndex+1}/${state.pages.length} · ⭐ ${state.wordsRead}`;
+}
+
+function updatePlayBtn(){
+  const btn=document.getElementById('play-btn');
+  const stop=document.getElementById('p-stop');
+  if(!state.isReading){ btn.textContent='▶ Read to me!'; stop.style.display='none'; }
+  else if(state.isPaused){ btn.textContent='▶ Continue'; stop.style.display='flex'; }
+  else{ btn.textContent='⏸ Pause'; stop.style.display='flex'; }
+  updateBookSub();
+}
+
+function showTapHint(){ document.getElementById('tap-hint').classList.remove('hidden'); }
+function hideTapHint(){ document.getElementById('tap-hint').classList.add('hidden'); }
+function showLoading(msg){ document.getElementById('loading').style.display='flex'; setLoadMsg(msg); }
+function hideLoading(){ document.getElementById('loading').style.display='none'; }
+function setLoadMsg(m){ document.getElementById('load-msg').textContent=m; }
+function showError(m){ const b=document.getElementById('error-box'); b.textContent='⚠️ '+m; b.classList.remove('hidden'); }
+function hideError(){ document.getElementById('error-box').classList.add('hidden'); }
+
+// ── Night mode ──────────────────────────────────────────────────────────────
+function toggleNight(){
+  state.nightMode=!state.nightMode;
+  document.body.classList.toggle('night',state.nightMode);
+  document.getElementById('night-btn').textContent=state.nightMode?'☀️':'🌙';
+  document.querySelector('meta[name="theme-color"]').content=state.nightMode?'#1C1005':'#EA580C';
+}
+
+// ── Settings ─────────────────────────────────────────────────────────────────
+function buildSpeedBtns(){
+  const wrap=document.getElementById('speed-btns');
+  wrap.innerHTML='';
+  SPEEDS.forEach((s,i)=>{
+    const btn=document.createElement('button');
+    btn.className='speed-btn'+(i===state.speedIdx?' active':'');
+    btn.textContent=s.label;
+    btn.addEventListener('click',()=>{
+      state.speedIdx=i; currentSpeed=SPEEDS[i];
+      wrap.querySelectorAll('.speed-btn').forEach((b,j)=>b.classList.toggle('active',j===i));
+      if(state.isReading&&!state.isPaused){
+        const si=sentIdxNow,pi=pageIdxNow;
+        stopReading();
+        setTimeout(()=>{readingActive=true;pausedFlag=false;state.isReading=true;state.isPaused=false;updatePlayBtn();speakSentence(pi,si);},100);
+      }
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+// ── Event listeners ──────────────────────────────────────────────────────────
+document.getElementById('back-btn').addEventListener('click',()=>{stopReading();setScreen('library');});
+document.getElementById('night-btn').addEventListener('click',toggleNight);
+document.getElementById('settings-btn').addEventListener('click',()=>{
+  document.getElementById('settings-panel').classList.toggle('hidden');
+});
+document.getElementById('play-btn').addEventListener('click',()=>{
+  if(!state.isReading) startReading();
+  else if(state.isPaused) resumeReading();
+  else pauseReading();
+});
+document.getElementById('p-stop').addEventListener('click',stopReading);
+document.getElementById('prev-btn').addEventListener('click',()=>goPage(-1));
+document.getElementById('next-btn').addEventListener('click',()=>goPage(1));
+document.getElementById('p-prev').addEventListener('click',()=>goPage(-1));
+document.getElementById('p-next').addEventListener('click',()=>goPage(1));
+document.getElementById('lib-file-input').addEventListener('change',e=>processFile(e.target.files?.[0]));
+document.getElementById('player-file-input').addEventListener('change',e=>processFile(e.target.files?.[0]));
+document.getElementById('word-popup-bg').addEventListener('click',e=>{if(e.target===e.currentTarget)hideWordPopup();});
+document.getElementById('popup-close').addEventListener('click',hideWordPopup);
+document.getElementById('popup-hear').addEventListener('click',()=>{
+  const u=new SpeechSynthesisUtterance(popupWord);
+  u.rate=0.65;u.pitch=1.1;if(currentVoice)u.voice=currentVoice;
+  speechSynthesis.cancel();speechSynthesis.speak(u);
+});
+document.getElementById('size-down').addEventListener('click',()=>{
+  state.fontSize=Math.max(16,state.fontSize-2);
+  document.getElementById('size-val').textContent=state.fontSize;
+  if(state.pages.length)renderPage();
+});
+document.getElementById('size-up').addEventListener('click',()=>{
+  state.fontSize=Math.min(44,state.fontSize+2);
+  document.getElementById('size-val').textContent=state.fontSize;
+  if(state.pages.length)renderPage();
+});
+document.getElementById('voice-select').addEventListener('change',e=>{
+  state.voiceIdx=+e.target.value;
+  currentVoice=state.allVoices[state.voiceIdx]||null;
+});
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+loadLibrary();
+buildSpeedBtns();
+currentSpeed=SPEEDS[state.speedIdx];
+renderLibrary();
+setScreen('library');
+
+speechSynthesis.onvoiceschanged=loadVoices;
+loadVoices();
+setTimeout(loadVoices,500); // fallback for some browsers
+
+// Register service worker
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js')
+      .then(()=>console.log('SW registered'))
+      .catch(e=>console.log('SW failed:',e));
+  });
+}
+</script>
+</body>
+</html>
